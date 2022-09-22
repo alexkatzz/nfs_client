@@ -111,9 +111,11 @@ class NFSv3(RPC):
 
     @fh_check
     def lookup(self, dir_handle, file_folder, auth=None, xid=None, nfs_program=NFS_PROGRAM, nfs_version=NFS_V3,
-               rpc_version=2):
+               rpc_version=2, file_folder_is_string=True):
+        file_folder = str_to_bytes(file_folder) if file_folder_is_string else file_folder
+        pack_opaque = False if file_folder_is_string else True
         packer = nfs_pro_v3Packer()
-        packer.pack_diropargs3(diropargs3(dir=nfs_fh3(dir_handle), name=str_to_bytes(file_folder)))
+        packer.pack_diropargs3(diropargs3(dir=nfs_fh3(dir_handle), name=file_folder, pack_opaque=pack_opaque))
 
         logger.debug("NFSv3 procedure %d: LOOKUP on %s" % (NFS3_PROCEDURE_LOOKUP, self.host))
         data = self.nfs_request(NFS3_PROCEDURE_LOOKUP, packer.get_buffer(), auth if auth else self.auth, xid=xid,
@@ -184,10 +186,12 @@ class NFSv3(RPC):
                verf='0', auth=None, xid=None, nfs_program=NFS_PROGRAM, nfs_version=NFS_V3, rpc_version=2,
                filename_is_string=True):
         filename = str_to_bytes(file_name) if filename_is_string else file_name
+        pack_opaque = False if filename_is_string else True
         packer = nfs_pro_v3Packer()
         attrs = self.get_sattr3(mode, uid, gid, size, atime_flag, atime_s, atime_us, mtime_flag, mtime_s, mtime_us)
-        packer.pack_create3args(create3args(where=diropargs3(dir=nfs_fh3(dir_handle), name=filename),
-                                            how=createhow3(mode=create_mode, obj_attributes=attrs, verf=verf)))
+        packer.pack_create3args(create3args(where=diropargs3(dir=nfs_fh3(dir_handle), name=filename,
+                                            pack_opaque=pack_opaque), how=createhow3(mode=create_mode,
+                                            obj_attributes=attrs, verf=verf)))
 
         logger.debug("NFSv3 procedure %d: CREATE on %s" % (NFS3_PROCEDURE_CREATE, self.host))
         data = self.nfs_request(NFS3_PROCEDURE_CREATE, packer.get_buffer(), auth if auth else self.auth, xid=xid,
@@ -200,11 +204,14 @@ class NFSv3(RPC):
     def mkdir(self, dir_handle, dir_name, mode=None, uid=None, gid=None,
               atime_flag=SET_TO_SERVER_TIME, atime_s=None, atime_us=None,
               mtime_flag=SET_TO_SERVER_TIME, mtime_s=None, mtime_us=None,
-              auth=None, xid=None, nfs_program=NFS_PROGRAM, nfs_version=NFS_V3, rpc_version=2):
+              auth=None, xid=None, nfs_program=NFS_PROGRAM, nfs_version=NFS_V3, rpc_version=2,
+              dir_name_is_string=True):
+        dir_name = str_to_bytes(dir_name) if dir_name_is_string else dir_name
+        pack_opaque = False if dir_name_is_string else True
         packer = nfs_pro_v3Packer()
         attrs = self.get_sattr3(mode, uid, gid, None, atime_flag, atime_s, atime_us, mtime_flag, mtime_s, mtime_us)
-        packer.pack_mkdir3args(mkdir3args(where=diropargs3(dir=nfs_fh3(dir_handle), name=str_to_bytes(dir_name)),
-                                          attributes=attrs))
+        packer.pack_mkdir3args(mkdir3args(where=diropargs3(dir=nfs_fh3(dir_handle), name=dir_name,
+                                                           pack_opaque=pack_opaque), attributes=attrs))
 
         logger.debug("NFSv3 procedure %d: MKDIR on %s" % (NFS3_PROCEDURE_MKDIR, self.host))
         res = self.nfs_request(NFS3_PROCEDURE_MKDIR, packer.get_buffer(), auth if auth else self.auth, xid=xid,
@@ -215,12 +222,15 @@ class NFSv3(RPC):
 
     @fh_check
     def symlink(self, dir_handle, link_name, link_to_path, auth=None, xid=None, nfs_program=NFS_PROGRAM,
-                nfs_version=NFS_V3, rpc_version=2):
+                nfs_version=NFS_V3, rpc_version=2, link_name_is_string=True):
+        link_name = str_to_bytes(link_name) if link_name_is_string else link_name
+        pack_opaque = False if link_name_is_string else True
         packer = nfs_pro_v3Packer()
         attrs = self.get_sattr3(mode=None, size=None, uid=None, gid=None, atime_flag=DONT_CHANGE,
                                 mtime_flag=DONT_CHANGE)
         packer.pack_symlink3args(symlink3args(where=diropargs3(dir=nfs_fh3(dir_handle),
-                                                               name=str_to_bytes(link_name)),
+                                                               name=link_name,
+                                                               pack_opaque=pack_opaque),
                                               symlink=symlinkdata3(symlink_attributes=attrs,
                                                                    symlink_data=str_to_bytes(link_to_path))))
 
@@ -237,7 +247,9 @@ class NFSv3(RPC):
               atime_flag=SET_TO_SERVER_TIME, atime_s=None, atime_us=None,
               mtime_flag=SET_TO_SERVER_TIME, mtime_s=None, mtime_us=None,
               spec_major=0, spec_minor=0, auth=None, xid=None, nfs_program=NFS_PROGRAM, nfs_version=NFS_V3,
-              rpc_version=2):
+              rpc_version=2, file_name_is_string=True):
+        file_name = str_to_bytes(file_name) if file_name_is_string else file_name
+        pack_opaque = False if file_name_is_string else True
         packer = nfs_pro_v3Packer()
         attrs = self.get_sattr3(mode, uid, gid, None, atime_flag, atime_s, atime_us, mtime_flag, mtime_s, mtime_us)
         if ftype in (NF3CHR, NF3BLK):
@@ -248,7 +260,8 @@ class NFSv3(RPC):
         else:
             raise ValueError("ftype must be one of [%d, %d, %d, %d]" % (NF3CHR, NF3BLK, NF3SOCK, NF3FIFO))
         packer.pack_mknod3args(mknod3args(where=diropargs3(dir=nfs_fh3(dir_handle),
-                                                           name=str_to_bytes(file_name)),
+                                                           name=file_name,
+                                                           pack_opaque=pack_opaque),
                                           what=what))
 
         logger.debug("NFSv3 procedure %d: MKNOD on %s" % (NFS3_PROCEDURE_MKNOD, self.host))
@@ -260,9 +273,12 @@ class NFSv3(RPC):
 
     @fh_check
     def remove(self, dir_handle, file_name, auth=None, xid=None, nfs_program=NFS_PROGRAM, nfs_version=NFS_V3,
-               rpc_version=2):
+               rpc_version=2, file_name_is_string = True):
+        file_name = str_to_bytes(file_name) if file_name_is_string else file_name
+        pack_opaque = False if file_name_is_string else True
         packer = nfs_pro_v3Packer()
-        packer.pack_diropargs3(diropargs3(dir=nfs_fh3(dir_handle), name=str_to_bytes(file_name)))
+        packer.pack_diropargs3(diropargs3(dir=nfs_fh3(dir_handle), name=file_name,
+                                          pack_opaque=pack_opaque))
 
         logger.debug("NFSv3 procedure %d: REMOVE on %s" % (NFS3_PROCEDURE_REMOVE, self.host))
         res = self.nfs_request(NFS3_PROCEDURE_REMOVE, packer.get_buffer(), auth if auth else self.auth, xid=xid,
@@ -273,9 +289,12 @@ class NFSv3(RPC):
 
     @fh_check
     def rmdir(self, dir_handle, dir_name, auth=None, xid=None, nfs_program=NFS_PROGRAM, nfs_version=NFS_V3,
-              rpc_version=2):
+              rpc_version=2, dir_name_is_string=True):
+        dir_name = str_to_bytes(dir_name) if dir_name_is_string else dir_name
+        pack_opaque = False if dir_name_is_string else True
         packer = nfs_pro_v3Packer()
-        packer.pack_diropargs3(diropargs3(dir=nfs_fh3(dir_handle), name=str_to_bytes(dir_name)))
+        packer.pack_diropargs3(diropargs3(dir=nfs_fh3(dir_handle), name=dir_name,
+                                          pack_opaque=pack_opaque))
 
         logger.debug("NFSv3 procedure %d: RMDIR on %s" % (NFS3_PROCEDURE_RMDIR, self.host))
         res = self.nfs_request(NFS3_PROCEDURE_RMDIR, packer.get_buffer(), auth if auth else self.auth, xid=xid,
@@ -286,15 +305,21 @@ class NFSv3(RPC):
 
     @fh_check
     def rename(self, dir_handle_from, from_name, dir_handle_to, to_name, auth=None, xid=None, nfs_program=NFS_PROGRAM,
-               nfs_version=NFS_V3, rpc_version=2):
+               nfs_version=NFS_V3, rpc_version=2, from_name_is_string=True, to_name_is_string=True):
+        from_name = str_to_bytes(from_name) if from_name_is_string else from_name
+        to_name = str_to_bytes(to_name) if to_name_is_string else to_name
+        from_name_pack_opaque = False if from_name_is_string else True
+        to_name_pack_opaque = False if to_name_is_string else True
         if not isinstance(dir_handle_to, bytes):
             raise TypeError("file handle should be bytes")
 
         packer = nfs_pro_v3Packer()
         packer.pack_rename3args(rename3args(from_v=diropargs3(dir=nfs_fh3(dir_handle_from),
-                                                              name=str_to_bytes(from_name)),
+                                                              name=from_name,
+                                                              pack_opaque=from_name_pack_opaque),
                                             to=diropargs3(dir=nfs_fh3(dir_handle_to),
-                                                          name=str_to_bytes(to_name))))
+                                                          name=to_name,
+                                                          pack_opaque=to_name_pack_opaque)))
 
         logger.debug("NFSv3 procedure %d: RENAME on %s" % (NFS3_PROCEDURE_RENAME, self.host))
         res = self.nfs_request(NFS3_PROCEDURE_RENAME, packer.get_buffer(), auth if auth else self.auth, xid=xid,
@@ -305,10 +330,13 @@ class NFSv3(RPC):
 
     @fh_check
     def link(self, file_handle, link_to_dir_handle, link_name, auth=None, xid=None, nfs_program=NFS_PROGRAM,
-             nfs_version=NFS_V3, rpc_version=2):
+             nfs_version=NFS_V3, rpc_version=2, link_name_is_string=True):
+        link_name = str_to_bytes(link_name) if link_name_is_string else link_name
+        pack_opaque = False if link_name_is_string else True
         packer = nfs_pro_v3Packer()
         packer.pack_link3args(link3args(file=nfs_fh3(file_handle),
-                                        link=diropargs3(dir=nfs_fh3(link_to_dir_handle), name=str_to_bytes(link_name))))
+                                        link=diropargs3(dir=nfs_fh3(link_to_dir_handle), name=link_name,
+                                                        pack_opaque=pack_opaque)))
 
         logger.debug("NFSv3 procedure %d: LINK on %s" % (NFS3_PROCEDURE_LINK, self.host))
         res = self.nfs_request(NFS3_PROCEDURE_LINK, packer.get_buffer(), auth if auth else self.auth, xid=xid,

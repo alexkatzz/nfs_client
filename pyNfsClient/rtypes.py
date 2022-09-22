@@ -327,9 +327,11 @@ class diropargs3:
     #     nfs_fh3 dir;
     #     filename3 name;
     # };
-    def __init__(self, dir=None, name=None):
+
+    def __init__(self, dir=None, name=None, pack_opaque=None):
         self.dir = dir
         self.name = name
+        self.pack_opaque = pack_opaque
 
     def __repr__(self):
         out = []
@@ -337,6 +339,8 @@ class diropargs3:
             out += ['dir=%s' % repr(self.dir)]
         if self.name is not None:
             out += ['name=%s' % repr(self.name)]
+        if self.pack_opaque is not None:
+            out += ['name=%s' % repr(self.pack_opaque)]
         return 'diropargs3(%s)' % ', '.join(out)
 
 
