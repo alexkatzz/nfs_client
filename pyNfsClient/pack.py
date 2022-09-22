@@ -248,7 +248,10 @@ class nfs_pro_v3Packer(Packer):
         self.pack_nfs_fh3(data.dir)
         if data.name is None:
             raise TypeError('data.name == None')
-        self.pack_filename3(data.name)
+        if not data.pack:
+            self.__buf.write(data)
+        else:
+            self.pack_filename3(data.name)
 
     def pack_diropres3ok(self, data):
         if data.obj is None:
