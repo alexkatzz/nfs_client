@@ -1,4 +1,4 @@
-pyNfsClient
+nfs_client
 ===============
 
 .. contents::
@@ -6,6 +6,9 @@ pyNfsClient
 
 Introduction
 ------------
+
+This is a fork of https://github.com/aeropeek/NfsClient repository which is a fork
+of https://github.com/CharmingYang0/NfsClient
 
 pyNfsClient is a generic open source toolkit for Linux NFS file system simulation as client.
 Constructed parameters sent via RPC and then analyse the response in reference to NFS protocol specifications (RFC1813).
@@ -19,20 +22,13 @@ Python 2.7 and Python 3.
 pyNfsClient project is hosted on GitHub_ where you can find source code,
 an issue tracker, and some further documentation.
 
-.. _GitHub: https://github.com/CharmingYang0/NfsClient
-.. _PyPI: https://pypi.org/project/pyNfsClient
-
-.. image:: https://img.shields.io/pypi/v/pyNfsClient.svg?label=version
-   :target: https://pypi.org/project/pyNfsClient/
-   :alt: Latest version
-
 Installation
 ------------
 
 If you already have `Python <https://www.python.org>`__ with `pip <http://pip-installer.org>`__ installed,
 you can simply run::
 
-    pip install pyNfsClient
+    pip install nfs_client@git+https://github.com/alexkatzz/nfs_client
 
 Alternatively you can get source code by downloading the source
 distribution from PyPI_ and extracting it, or by cloning the project repository
@@ -47,7 +43,7 @@ Below is a simple example which lookup a file and then do several operations on 
 
 .. code:: python
 
-    from pyNfsClient import (Portmap, Mount, NFSv3, MNT3_OK, NFS_PROGRAM,
+    from nfs_client import (Portmap, Mount, NFSv3, MNT3_OK, NFS_PROGRAM,
                            NFS_V3, NFS3_OK, DATA_SYNC)
     
     # variable preparation
@@ -67,25 +63,25 @@ Below is a simple example which lookup a file and then do several operations on 
     
     # mount initialization
     mnt_port = portmap.getport(Mount.program, Mount.program_version)
-    mount = Mount(host=host, port=mnt_port, timeout=3600)
+    mount = Mount(host=host, port=mnt_port, timeout=3600, auth=auth)
     mount.connect()
     
     # do mount
-    mnt_res =mount.mnt(mount_path, auth)
+    mnt_res = mount.mnt(mount_path)
     if mnt_res["status"] == MNT3_OK:
-        root_fh =mnt_res["mountinfo"]["fhandle"]
+        root_fh = mnt_res["mountinfo"]["fhandle"]
         try:
             nfs_port =portmap.getport(NFS_PROGRAM, NFS_V3)
             # nfs actions
-            nfs3 =NFSv3(host, nfs_port, 3600)
+            nfs3 = NFSv3(host, nfs_port, 3600, auth)
             nfs3.connect()
-            lookup_res = nfs3.lookup(root_fh, "file.txt", auth)
+            lookup_res = nfs3.lookup(root_fh, "file.txt")
             if lookup_res["status"] == NFS3_OK:
                 fh = lookup_res["resok"]["object"]["data"]
                 write_res = nfs3.write(fh, offset=0, count=11, content="Sample text",
-                                       stable_how=DATA_SYNC, auth=auth)
+                                       stable_how=DATA_SYNC)
                 if write_res["status"] == NFS3_OK:
-                    read_res = nfs3.read(fh, offset=0, auth=auth)
+                    read_res = nfs3.read(fh, offset=0)
                     if read_res["status"] == NFS3_OK:
                         read_content = str(read_res["resok"]["data"], encoding="utf-8")
                         assert read_content.startswith("Sample text")
@@ -96,7 +92,7 @@ Below is a simple example which lookup a file and then do several operations on 
         finally:
             if nfs3:
                 nfs3.disconnect()
-            mount.umnt(mount_path, auth)
+            mount.umnt()
             mount.disconnect()
             portmap.disconnect()
     else:

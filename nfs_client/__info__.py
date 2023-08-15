@@ -1,4 +1,4 @@
-__title__ = "pyNfsClient"
+__title__ = "nfs_client"
 __description__ = "Pure python NFS client"
 __version__ = "0.1.5"
 __license__ = "MIT"
